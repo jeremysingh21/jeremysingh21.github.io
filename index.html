@@ -28,17 +28,16 @@
     var map = new Map({
       basemap: "streets-navigation-vector"
     });
-
+    var featureLayer = new FeatureLayer({
+      url: "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Trailheads/FeatureServer"
+    });
+    map.add(featureLayer);
     var view = new MapView({
       container: "viewDiv",
       map: map,
       center: [-118.71511,34.09042],
       zoom: 11
     });
-    var featureLayer = new FeatureLayer({
-      url: "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Trailheads/FeatureServer"
-    });
-    map.add(featureLayer);
   });
 </script>
   </body>
