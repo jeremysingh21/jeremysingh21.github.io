@@ -44,7 +44,7 @@
       });
 
       const map = new Map({
-        basemap: "topo",
+        basemap: "gray-vector",
         layers: [fLayer]
       });
 
@@ -52,11 +52,7 @@
         container: "viewDiv",
         map: map,
         center: [-80, 40],
-        scale: 5000000,
-        highlightOptions: {
-          color: #009933
-          }
-
+        scale: 5000000
       });
 
       view.when().then(function() {
