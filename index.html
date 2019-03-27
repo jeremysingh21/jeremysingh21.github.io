@@ -36,16 +36,16 @@
         container: "viewDiv",
         map: map,
         camera: {
-          position: [-74.0338, 40.6913, 707],
-          tilt: 81,
-          heading: 50
+          position: [ -80.198928, 25.795487,3000],
+          tilt: 10,
+          heading: 0
         }
       });
 
       // Create SceneLayer and add to the map
       var sceneLayer = new SceneLayer({
         portalItem: {
-          id: "2e0761b9a4274b8db52c4bf34356911e"
+          id: "b162d491955744ff9e9de7913bb49693 "
         },
         popupEnabled: false
       });
@@ -67,14 +67,15 @@
         type: "simple", // autocasts as new SimpleRenderer()
         symbol: symbol
       };
+
       var highlight = null;
       view.on("pointer-move", function(event){
          view.hitTest(event).then(function(response){
          if (response.results[0]) {
-         var graphic = response.results[0].graphic;
+         var graphic = response.results[0].graphic;// makes graphic the building outline
          view.whenLayerView(graphic.layer).then(function(layerView){
-           if(highlight){
-             highlight.remove();
+            if(highlight){
+            highlight.remove();
            }
            highlight = layerView.highlight(graphic);
 
@@ -82,7 +83,8 @@
    }
  })
 
-});
+ });
+
     });
   </script>
 </head>
