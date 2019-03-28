@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
-  <title>Intro to SceneLayer - 4.10</title>
+  <title>Intro to PopupTemplate - 4.10</title>
+
   <style>
     html,
     body,
@@ -13,6 +14,24 @@
       height: 100%;
       width: 100%;
     }
+      #paneDiv {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      padding: 20px 0;
+      z-index: 1;
+      text-align: center;
+    }
+    button {
+      background: white;
+      padding: 7px;
+      border: 1px solid #005e95;
+      font-size: 0.9em;
+      margin: 5px;
+      color: #005e95;
+    }
+
+
   </style>
 
   <link rel="stylesheet" href="https://js.arcgis.com/4.10/esri/css/main.css">
@@ -21,75 +40,119 @@
   <script>
     require([
       "esri/Map",
-      "esri/views/SceneView",
-      "esri/layers/SceneLayer"
-    ], function(Map, SceneView, SceneLayer) {
-
-      // Create Map
-      var map = new Map({
-        basemap: "dark-gray",
-        ground: "world-elevation"
-      });
-
-      // Create the SceneView
-      var view = new SceneView({
-        container: "viewDiv",
-        map: map,
-        camera: {
-          position: [ -80.198928, 25.795487,3000],
-          tilt: 10,
-          heading: 0
-        }
-      });
-
-      // Create SceneLayer and add to the map
-      var sceneLayer = new SceneLayer({
-        portalItem: {
-          id: "b162d491955744ff9e9de7913bb49693 "
-        },
-        popupEnabled: false
-      });
-      map.add(sceneLayer);
-
-      // Create MeshSymbol3D for symbolizing SceneLayer
-      var symbol = {
-        type: "mesh-3d", // autocasts as new MeshSymbol3D()
-        symbolLayers: [{
-          type: "fill", // autocasts as new FillSymbol3DLayer()
-          // If the value of material is not assigned, the default color will be grey
-          material: {
-            color: [244, 247, 134]
-          }
+      "esri/layers/FeatureLayer",
+      "esri/views/MapView"
+    ], function(
+      Map,
+      FeatureLayer,
+      MapView
+    ) {
+      //
+      // const fLayer = new featureLayer({
+      //   portalItem: {
+      //     id: "bba798b019ce4f20ac7db2b1f5df860c#data"
+      //   }
+      //   });
+      var template = { // autocasts as new PopupTemplate()
+        title: "This Lot is {CITY} SQFT in Size",
+        content: [{
+          // It is also possible to set the fieldInfos outside of the content
+          // directly in the popupTemplate. If no fieldInfos is specifically set
+          // in the content, it defaults to whatever may be set within the popupTemplate.
+          type: "fields",
+          fieldInfos: [{
+            fieldName: "NAME",
+            label: "Name",
+            visible: true
+          }, {
+            fieldName: "ZIP_CODE",
+            label: "ZIP",
+            visible: true,
+            format: {
+              digitSeparator: true,
+              places: 0
+            }
+          }]
         }]
       };
-      // Add the renderer to sceneLayer
-      sceneLayer.renderer = {
-        type: "simple", // autocasts as new SimpleRenderer()
-        symbol: symbol
-      };
+      var featureLayer = new FeatureLayer({
+        url: "https://services1.arcgis.com/JPUKRee8mEBfJ0K4/arcgis/rest/services/BrownBagSeafood_Intersections/FeatureServer",
 
-      var highlight = null;
-      view.on("pointer-move", function(event){
-         view.hitTest(event).then(function(response){
-         if (response.results[0]) {
-         var graphic = response.results[0].graphic;// makes graphic the building outline
-         view.whenLayerView(graphic.layer).then(function(layerView){
-            if(highlight){
-            highlight.remove();
-           }
-           highlight = layerView.highlight(graphic);
+        popupTemplate: template
+      });
+      // Create the map
+      var map = new Map({
+        basemap: "gray",
+        layers: [featureLayer]
+        });
 
-     })
-   }
- })
+      // Create the MapView
+      var view = new MapView({
+        container: "viewDiv",
+        map: map,
+        center: [-73.955717, 40.641098],
+        zoom: 13
+      });
 
- });
+      /*************************************************************
+       * The PopupTemplate content is the text that appears inside the
+       * popup. {fieldName} can be used to reference the value of an
+       * attribute of the selected feature. HTML elements can be used
+       * to provide structure and styles within the content. The
+       * fieldInfos property is an array of objects (each object representing
+       * a field) that is use to format number fields and customize field
+       * aliases in the popup and legend.
+       **************************************************************/
 
+
+
+      // Reference the popupTemplate instance in the
+      // popupTemplate property of FeatureLayer
+      //
+
+      //map.add(featureLayer);
+      var highlightSelect, highlightHover;
+      var hoverPromise;
+
+      view.when(function(){
+        var lotLayer = map.layers.getItemAt(0);
+        view.whenLayerView(lotLayer).then(function(layerView){
+            var queryLots = lotLayer.createQuery();
+            var buttons = document.querySelectorAll("button");
+            for (var i = 0, button = null; button = buttons[i]; i++){
+              console.log(button);
+              button.addEventListener("click", onClick);
+            }
+            function onClick(event){
+              queryLots.where = "ZIP_CODE='" + event.target.innerText + "'";
+              lotLayer.queryFeatures(queryLots).then(
+                function(result){
+                  if (highlightSelect){
+                    highlightSelect.remove();
+                  }
+                var x;
+                for(x = 0; x <= result.features.length; x++){
+                var feature = result.features[x];
+                highlightSelect = layerView.highlight(feature.attributes['OBJECTID']);
+              }
+              });
+            }
+
+        });
+
+})
     });
   </script>
 </head>
 
 <body>
   <div id="viewDiv"></div>
+  <div id="paneDiv">
+    <h3>Zip Codes</h3>
+    <button>10001</button>
+    <button>10003</button>
+    <button>10019</button>
+</div>
 </body>
+
 </html>
