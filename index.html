@@ -54,19 +54,19 @@
       //   }
       //   });
       var template = { // autocasts as new PopupTemplate()
-        title: "This Lot is {CITY} SQFT in Size",
+        title: "This Lot is {Lot} SQFT in Size",
         content: [{
           // It is also possible to set the fieldInfos outside of the content
           // directly in the popupTemplate. If no fieldInfos is specifically set
           // in the content, it defaults to whatever may be set within the popupTemplate.
           type: "fields",
           fieldInfos: [{
-            fieldName: "NAME",
-            label: "Name",
+            fieldName: "Borough",
+            label: "Borough",
             visible: true
           }, {
-            fieldName: "ZIP_CODE",
-            label: "ZIP",
+            fieldName: "Block",
+            label: "Block",
             visible: true,
             format: {
               digitSeparator: true,
@@ -76,9 +76,10 @@
         }]
       };
       var featureLayer = new FeatureLayer({
-        url: "https://services1.arcgis.com/JPUKRee8mEBfJ0K4/arcgis/rest/services/BrownBagSeafood_Intersections/FeatureServer",
-
-        popupTemplate: template
+        portalItem: {
+          id:"bba798b019ce4f20ac7db2b1f5df860c"
+        },
+          popupTemplate: template
       });
       // Create the map
       var map = new Map({
@@ -90,7 +91,7 @@
       var view = new MapView({
         container: "viewDiv",
         map: map,
-        center: [-73.989600, 40.742220],
+        center: [-73.954509, 40.620479],
         zoom: 13
       });
 
@@ -111,8 +112,8 @@
       //
 
       //map.add(featureLayer);
-      var highlightSelect, highlightHover;
-      var hoverPromise;
+      var highlightSelect;
+      //var hoverPromise;
 
       view.when(function(){
         var lotLayer = map.layers.getItemAt(0);
@@ -124,17 +125,28 @@
               button.addEventListener("click", onClick);
             }
             function onClick(event){
-              queryLots.where = "ZIP_CODE='" + event.target.innerText + "'";
+
+              queryLots.where = "Lot='" + event.target.innerText + "'";
               lotLayer.queryFeatures(queryLots).then(
                 function(result){
+                  //var x = null;
                   if (highlightSelect){
+
                     highlightSelect.remove();
+
                   }
-                var x;
-                for(x = 0; x <= result.features.length; x++){
+                  var oid = [];
+                for(x = 0; x < result.features.length; x++){
+
                 var feature = result.features[x];
-                highlightSelect = layerView.highlight(feature.attributes['OBJECTID']);
+                oid.push(feature.attributes['OBJECTID']);
+                //console.log(feature);
+
+                //console.log(highlightSelect);
+
+                //return x;
               }
+              highlightSelect = layerView.highlight(oid);
               });
             }
 
@@ -148,10 +160,10 @@
 <body>
   <div id="viewDiv"></div>
   <div id="paneDiv">
-    <h3>Click to highlight points in these zip codes</h3>
-    <button>10001</button>
-    <button>10003</button>
-    <button>10019</button>
+    <h3> Click to polygons with these SQFT </h3>
+    <button>1</button>
+    <button>18</button>
+    <button>67</button>
 </div>
 </body>
 
