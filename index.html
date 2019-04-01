@@ -46,13 +46,8 @@
       Map,
       FeatureLayer,
       MapView
-    ) {
-      //
-      // const fLayer = new featureLayer({
-      //   portalItem: {
-      //     id: "bba798b019ce4f20ac7db2b1f5df860c#data"
-      //   }
-      //   });
+    )
+    {
       var template = { // autocasts as new PopupTemplate()
         title: "This Lot is {Lot} SQFT in Size",
         content: [{
@@ -79,7 +74,7 @@
         portalItem: {
           id:"bba798b019ce4f20ac7db2b1f5df860c"
         },
-          popupTemplate: template
+          popupTemplate: template //assign popupTemplates here to where layer is defined
       });
       // Create the map
       var map = new Map({
@@ -95,58 +90,33 @@
         zoom: 13
       });
 
-      /*************************************************************
-       * The PopupTemplate content is the text that appears inside the
-       * popup. {fieldName} can be used to reference the value of an
-       * attribute of the selected feature. HTML elements can be used
-       * to provide structure and styles within the content. The
-       * fieldInfos property is an array of objects (each object representing
-       * a field) that is use to format number fields and customize field
-       * aliases in the popup and legend.
-       **************************************************************/
 
-
-
-      // Reference the popupTemplate instance in the
-      // popupTemplate property of FeatureLayer
-      //
-
-      //map.add(featureLayer);
       var highlightSelect;
-      //var hoverPromise;
+
 
       view.when(function(){
         var lotLayer = map.layers.getItemAt(0);
         view.whenLayerView(lotLayer).then(function(layerView){
-            var queryLots = lotLayer.createQuery();
-            var buttons = document.querySelectorAll("button");
+            var queryLots = lotLayer.createQuery();//Creates Query to reference buttons created
+            var buttons = document.querySelectorAll("button");//Pushes all button names to variable
             for (var i = 0, button = null; button = buttons[i]; i++){
-              console.log(button);
-              button.addEventListener("click", onClick);
+              //console.log(button);
+              button.addEventListener("click", onClick);//Adds eventlistener for instances for every button then calls function onClick
             }
             function onClick(event){
-
-              queryLots.where = "Lot='" + event.target.innerText + "'";
-              lotLayer.queryFeatures(queryLots).then(
+              queryLots.where = "Lot='" + event.target.innerText + "'"; //intialize queryLots Varible where "object" = name in button
+              lotLayer.queryFeatures(queryLots).then( //using lotLayer queryFeatures of found queryLots item then highlight that object
                 function(result){
-                  //var x = null;
-                  if (highlightSelect){
+                   if (highlightSelect){
 
-                    highlightSelect.remove();
-
+                    highlightSelect.remove();//remove highlight
                   }
-                  var oid = [];
-                for(x = 0; x < result.features.length; x++){
-
+                var oid = [];// store all found OBJECTID in array to remove
+              for(x = 0; x < result.features.length; x++){// run loop through all features in results
                 var feature = result.features[x];
-                oid.push(feature.attributes['OBJECTID']);
-                //console.log(feature);
-
-                //console.log(highlightSelect);
-
-                //return x;
+                oid.push(feature.attributes['OBJECTID']);// send all items to array outside loop so that removing highlight can work
               }
-              highlightSelect = layerView.highlight(oid);
+              highlightSelect = layerView.highlight(oid);// highlight features
               });
             }
 
