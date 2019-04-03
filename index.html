@@ -1,140 +1,257 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
-  <title>Intro to PopupTemplate - 4.10</title>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1, maximum-scale=1,user-scalable=no"
+    />
 
-  <style>
-    html,
-    body,
-    #viewDiv {
-      padding: 0;
-      margin: 0;
-      height: 100%;
-      width: 100%;
-    }
-      #paneDiv {
-      position: absolute;
-      bottom: 0;
-      width: 100%;
-      padding: 20px 0;
-      z-index: 1;
-      text-align: center;
-    }
-    button {
-      background: white;
-      padding: 7px;
-      border: 1px solid #005e95;
-      font-size: 0.9em;
-      margin: 5px;
-      color: #005e95;
-    }
+    <title>Query statistics client-side by distance - 4.11</title>
 
+    <!-- Load the Chart.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.min.js"></script>
 
-  </style>
+    <link
+      rel="stylesheet"
+      href="https://js.arcgis.com/4.11/esri/themes/light/main.css"
+    />
 
-  <link rel="stylesheet" href="https://js.arcgis.com/4.10/esri/css/main.css">
-  <script src="https://js.arcgis.com/4.10/"></script>
+    <style>
+      html,
+      body {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+      }
 
-  <script>
-    require([
-      "esri/Map",
-      "esri/layers/FeatureLayer",
-      "esri/views/MapView"
-    ], function(
-      Map,
-      FeatureLayer,
-      MapView
-    )
-    {
-      var template = { // autocasts as new PopupTemplate()
-        title: "This Lot is {Lot} SQFT in Size",
-        content: [{
-          // It is also possible to set the fieldInfos outside of the content
-          // directly in the popupTemplate. If no fieldInfos is specifically set
-          // in the content, it defaults to whatever may be set within the popupTemplate.
-          type: "fields",
-          fieldInfos: [{
-            fieldName: "Borough",
-            label: "Borough",
-            visible: true
-          }, {
-            fieldName: "Block",
-            label: "Block",
-            visible: true,
-            format: {
-              digitSeparator: true,
-              places: 0
-            }
-          }]
-        }]
-      };
-      var featureLayer = new FeatureLayer({
-        portalItem: {
-          id:"bba798b019ce4f20ac7db2b1f5df860c"
-        },
-          popupTemplate: template //assign popupTemplates here to where layer is defined
-      });
-      // Create the map
-      var map = new Map({
-        basemap: "gray",
-        layers: [featureLayer]
+      #viewDiv {
+        position: absolute;
+        left: 0;
+        right: 40%;
+        top: 0;
+        bottom: 0;
+        height: 100%;
+        width: 100%;
+      }
+
+      #panel {
+        position: absolute;
+        right: 0;
+        height: 100%;
+        width: 40%;
+        overflow: scroll;
+      }
+
+    </style>
+
+    <script src="https://js.arcgis.com/4.11/"></script>
+
+    <script>
+      require([
+        "esri/views/MapView",
+        "esri/WebMap",
+        "esri/widgets/Legend",
+        "esri/widgets/Expand",
+        "esri/widgets/Bookmarks",
+        "esri/core/lang",
+        "esri/core/promiseUtils",
+        "esri/core/watchUtils"
+      ], function(
+        MapView,
+        WebMap,
+        Legend,
+        Expand,
+        Bookmarks,
+        lang,
+        promiseUtils,
+        watchUtils
+      ) {
+        // declare chart variables to update as the under interacts with the sample
+
+        let yearChart,
+          ageChart,
+          dispositionChart,
+          genderChart,
+          raceChart,
+          totalNumber,
+          avgAge,
+          avgOpenTime;
+
+        // load a web map containing homicide statistics
+        // from a portal item
+
+        const webmap = new WebMap({
+          portalItem: {
+            id: "1775c3da85d7487789050efcbd176e0f"
+          }
         });
 
-      // Create the MapView
-      var view = new MapView({
-        container: "viewDiv",
-        map: map,
-        center: [-73.954509, 40.620479],
-        zoom: 13
+        const view = new MapView({
+          map: webmap,
+          container: "viewDiv",
+          // constraints: {
+          //   minScale: 300000
+          // },
+          highlightOptions: {
+            color: "black",
+            haloOpacity: 0.65,
+            fillOpacity: 0.45
+          }
+        });
+        const titleContent = document.createElement("div");
+       titleContent.style.padding = "15px";
+       titleContent.style.backgroundColor = "white";
+       titleContent.style.width = "500px";
+       titleContent.innerHTML = [
+         "<div id='title' class='esri-widget'>",
+         "<span id='num-homicides'>0</span> homicides occurred within one mile of the pointer location over the last 10 years.",
+         "The average age of the victims is <span id='avg-age'>0</span>. The average time an unsolved case has been",
+         "open is <span id='avg-open-time'>0</span> years.",
+         "</div>"
+       ].join(" ");
+
+       const titleExpand = new Expand({
+         expandIconClass: "esri-icon-dashboard",
+         expandTooltip: "Summary stats",
+         view: view,
+         content: titleContent,
+         expanded: view.widthBreakpoint !== "xsmall"
+       });
+       view.ui.add(titleExpand, "top-right");
+
+       const legendExpand = new Expand({
+         view: view,
+         content: new Legend({
+           view: view
+         }),
+         expanded: view.widthBreakpoint !== "xsmall"
+       });
+       //view.ui.add(legendExpand, "bottom-left");
+
+       view.watch("widthBreakpoint", function(newValue) {
+         titleExpand.expanded = newValue !== "xsmall";
+         legendExpand.expanded = newValue !== "xsmall";
+       });
+
+       const bookmarksWidget = new Bookmarks({
+         view: view
+       });
+
+       const bookmarksExpand = new Expand({
+         view: view,
+         content: bookmarksWidget
+       });
+       view.ui.add(bookmarksExpand, "top-right");
+
+       bookmarksWidget.on("select-bookmark", function(event) {
+         bookmarksExpand.expanded = false;
+       });
+
+       // Displays instructions to the user for understanding the sample
+       // And places them in an Expand widget instance
+
+       const sampleInstructions = document.createElement("div");
+       sampleInstructions.style.padding = "10px";
+       sampleInstructions.style.backgroundColor = "white";
+       sampleInstructions.style.width = "300px";
+       sampleInstructions.innerHTML = [
+         "<b>Drag</b> the pointer over the data to view stats",
+         "within one mile of the pointer location."
+       ].join(" ");
+
+       const instructionsExpand = new Expand({
+         expandIconClass: "esri-icon-question",
+         expandTooltip: "How to use this sample",
+         view: view,
+         content: sampleInstructions
+       });
+       view.ui.add(instructionsExpand, "top-left");
+        let highlightHandle = null;
+
+        view.when().then(function() {
+      // Create the charts when the view is ready
+
+
+      const layer = webmap.layers.getItemAt(0);
+      layer.outFields = [
+        "CURR_ANNUA",
+
+      ];
+
+      view.whenLayerView(layer).then(function(layerView) {
+
+          // Query layer view statistics as the user clicks
+          // or drags the pointer across the view.
+          view.on(["click", "drag"], function(event) {
+            // disables navigation by pointer drag
+            event.stopPropagation();
+            queryStatsOnDrag(layerView, event)//.then(updateCharts);
+          });
+          function queryStatsOnDrag(layerView, event) {
+         // create a query object for the highlight and the statistics query
+
+         const query = layerView.layer.createQuery();
+         query.geometry = view.toMap(event); // converts the screen point to a map point
+         query.distance = 10; // queries all features within 1 mile of the point
+         query.units = "miles";
+
+         const statsQuery = query.clone();
+         const statDefinitions = [
+         {
+           onStatisticField:"CURR_ANNUA",
+           outStatisticFieldName: "Ann_Avg",
+           statisticType: "avg"
+                     }
+         ];
+
+         // highlight all features within the query distance
+          layerView.queryObjectIds(query).then(function(ids) {
+            if (highlightHandle) {
+              highlightHandle.remove();
+              highlightHandle = null;
+            }
+            highlightHandle = layerView.highlight(ids);
+          });
+       }
+
+
       });
 
-
-      var highlightSelect;
-
-
-      view.when(function(){
-        var lotLayer = map.layers.getItemAt(0);
-        view.whenLayerView(lotLayer).then(function(layerView){
-            var queryLots = lotLayer.createQuery();//Creates Query to reference buttons created
-            var buttons = document.querySelectorAll("button");//Pushes all button names to variable
-            for (var i = 0, button = null; button = buttons[i]; i++){
-              //console.log(button);
-              button.addEventListener("click", onClick);//Adds eventlistener for instances for every button then calls function onClick
-            }
-            function onClick(event){
-              queryLots.where = "Lot='" + event.target.innerText + "'"; //intialize queryLots Varible where "object" = name in button
-              lotLayer.queryFeatures(queryLots).then( //using lotLayer queryFeatures of found queryLots item then highlight that object
-                function(result){
-                   if (highlightSelect){
-
-                    highlightSelect.remove();//remove highlight
-                  }
-                var oid = [];// store all found OBJECTID in array to remove
-              for(x = 0; x < result.features.length; x++){// run loop through all features in results
-                var feature = result.features[x];
-                oid.push(feature.attributes['OBJECTID']);// send all items to array outside loop so that removing highlight can work
-              }
-              highlightSelect = layerView.highlight(oid);// highlight features
-              });
-            }
-
-        });
-
-})
     });
-  </script>
-</head>
 
-<body>
-  <div id="viewDiv"></div>
-  <div id="paneDiv">
-    <h3> Click to polygons with these SQFT </h3>
-    <button>1</button>
-    <button>18</button>
-    <button>67</button>
-</div>
-</body>
+});
 
+    </script>
+  </head>
+
+  <body>
+    <div id="viewDiv"></div>
+    <div id="panel">
+      <div style="padding: 15px;">
+        <canvas id="year-chart" height="250" width="550"></canvas>
+        <canvas id="age-chart" height="250" width="550"></canvas>
+        <canvas
+          id="disposition-chart"
+          width="200"
+          height="350"
+          style="float:left;"
+        ></canvas>
+        <canvas
+          id="gender-chart"
+          width="200"
+          height="350"
+          style="float:left;"
+        ></canvas>
+        <canvas
+          id="race-chart"
+          width="200"
+          height="350"
+          style="float:left;"
+        ></canvas>
+      </div>
+    </div>
+  </body>
 </html>
